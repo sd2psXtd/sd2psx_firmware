@@ -34,7 +34,7 @@ void ps2_cardman_set_channel(uint16_t num);
 void ps2_cardman_next_channel(void);
 void ps2_cardman_prev_channel(void);
 
-void ps2_cardman_set_idx(uint16_t num);
+void ps2_cardman_set_idx(int num);
 void ps2_cardman_next_idx(void);
 void ps2_cardman_prev_idx(void);
 
@@ -51,3 +51,6 @@ ps2_cardman_state_t ps2_cardman_get_state(void);
 
 bool ps2_cardman_needs_update(void);
 bool ps2_cardman_is_idle(void);
+
+bool ps2_cardman_card_with_idx_exists(int idx);
+int ps2_cardman_set_folder_name_for_gameid_with_idx(int idx);
