@@ -32,7 +32,7 @@ static int fd = -1;
 
 static int card_idx;
 static int card_chan;
-static char folder_name[MAX_GAME_ID_LENGTH];
+static char folder_name[MAX_FOLDER_LENGTH];
 static ps1_cardman_state_t cardman_state;
 
 static bool try_set_boot_card() {
@@ -53,6 +53,31 @@ static void set_default_card() {
     snprintf(folder_name, sizeof(folder_name), "Card%d", card_idx);
 }
 
+static bool search_game_folder(char *parent_id, char *folder_name, size_t folder_name_size) {
+    int dir_fd, it_fd = -1;
+    bool found = false;
+
+    dir_fd = sd_open("MemoryCards/PS1", O_RDONLY);
+    if (dir_fd >= 0) {
+        while ((it_fd = sd_iterate_dir(dir_fd, it_fd)) != -1) {
+            char name[256];
+            if (!sd_get_name(it_fd, name, sizeof(name))) {
+                continue;
+            }
+            if (strstr(name, parent_id) != NULL) {
+                snprintf(folder_name, folder_name_size, "%s", name);
+                found = true;
+            }
+        }
+        if (it_fd != -1) {
+            sd_close(it_fd);
+        }
+        sd_close(dir_fd);
+    }
+
+    return found;
+}
+
 static bool try_set_game_id_card() {
     if (!settings_get_ps1_game_id())
         return false;
@@ -64,11 +89,16 @@ static bool try_set_game_id_card() {
     if (!parent_id[0])
         return false;
 
+    char path[256];
+    snprintf(folder_name, sizeof(folder_name), "%s", parent_id);
+    snprintf(path, sizeof(path), "MemoryCards/PS1/%s", parent_id);
+    if (!sd_exists(path)) {
+        search_game_folder(parent_id, folder_name, sizeof(folder_name));
+    }
+
     card_idx = PS1_CARD_IDX_SPECIAL;
     card_chan = CHAN_MIN;
     cardman_state = PS1_CM_STATE_GAMEID;
-    snprintf(folder_name, sizeof(folder_name), "%s", parent_id);
-
     return true;
 }
 
@@ -143,7 +173,7 @@ void ps1_cardman_flush(void) {
 }
 
 static void ensuredirs(void) {
-    char cardpath[32];
+    char cardpath[254];
 
     snprintf(cardpath, sizeof(cardpath), "MemoryCards/PS1/%s", folder_name);
 
@@ -163,7 +193,8 @@ static void genblock(size_t pos, void *buf) {
 }
 
 void ps1_cardman_open(void) {
-    char path[64];
+    char path[254];
+    char parent_id[MAX_GAME_ID_LENGTH] = {};
     sd_init();
     ensuredirs();
 
@@ -187,7 +218,8 @@ void ps1_cardman_open(void) {
             break;
         case PS1_CM_STATE_NAMED:
         case PS1_CM_STATE_GAMEID:
-            snprintf(path, sizeof(path), "MemoryCards/PS1/%s/%s-%d.mcd", folder_name, folder_name, card_chan);
+            (void)game_db_get_current_parent(parent_id);
+            snprintf(path, sizeof(path), "MemoryCards/PS1/%s/%s-%d.mcd", folder_name, parent_id, card_chan);
             break;
         case PS1_CM_STATE_NORMAL:
             snprintf(path, sizeof(path), "MemoryCards/PS1/%s/%s-%d.mcd", folder_name, folder_name, card_chan);

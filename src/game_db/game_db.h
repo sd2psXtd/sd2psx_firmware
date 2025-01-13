@@ -6,6 +6,7 @@
 
 
 #define MAX_GAME_ID_LENGTH   (16)
+#define MAX_FOLDER_LENGTH   (250)
 
 void game_db_extract_title_id(const uint8_t* const in_title_id, char* const out_title_id, const size_t in_title_id_length, const size_t out_buffer_size);
 bool game_db_sanity_check_title_id(const char* const title_id);
